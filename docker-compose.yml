@@ -1,0 +1,73 @@
+services:
+  workstation:
+    build:
+      context: .
+      dockerfile: docker/workstation/Dockerfile
+    image: ${PROJECT_NAME:-web-workstation}-workstation
+    container_name: ${PROJECT_NAME:-web-workstation}-workstation
+    working_dir: /workspace/projects
+    command: zsh
+    tty: true
+    stdin_open: true
+    environment:
+      NODE_ENV: development
+      SHELL: /bin/zsh
+      EDITOR: nvim
+      VISUAL: nvim
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ${PROJECTS_PATH:-/mariomedrano/projects}:/workspace/projects
+      - workstation-home:/home/dev
+      - pnpm-store:/home/dev/.local/share/pnpm/store
+      - npm-cache:/home/dev/.npm
+    networks:
+      - webnet
+
+  dev-web:
+    build:
+      context: .
+      dockerfile: docker/dev-web/Dockerfile
+    image: ${PROJECT_NAME:-web-workstation}-dev-web
+    container_name: ${PROJECT_NAME:-web-workstation}-dev-web
+    working_dir: /app
+    command: sh -lc "pnpm install && pnpm dev --hostname 0.0.0.0"
+    tty: true
+    stdin_open: true
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "${DEV_WEB_PORT:-3000}:3000"
+      - "9229:9229"
+    volumes:
+      - ${PROJECTS_PATH:-/mariomedrano/projects}/${APP_NAME:-ajedrezlapaz}:/app
+      - dev-web-node-modules:/app/node_modules
+      - pnpm-store:/home/node/.local/share/pnpm/store
+    networks:
+      - webnet
+
+  prod-web:
+    build:
+      context: ${PROJECTS_PATH:-/mariomedrano/projects}/${APP_NAME:-ajedrezlapaz}
+      dockerfile: /Users/mariomedrano/Documents/Codex/2026-05-17/create-a-docker-container-for-my/docker/prod-web/Dockerfile
+    image: ${PROJECT_NAME:-web-workstation}-prod-web
+    container_name: ${PROJECT_NAME:-web-workstation}-prod-web
+    environment:
+      NODE_ENV: production
+    ports:
+      - "${PROD_WEB_PORT:-8080}:8080"
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    driver: bridge
+
+volumes:
+  workstation-home:
+  pnpm-store:
+  npm-cache:
+  dev-web-node-modules:
