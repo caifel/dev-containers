@@ -18,9 +18,9 @@ services:
       WATCHPACK_POLLING: "true"
     volumes:
       - ${PROJECTS_PATH:-/mariomedrano/projects}:/workspace/projects
-      - workstation-home:/home/dev
-      - pnpm-store:/home/dev/.local/share/pnpm/store
-      - npm-cache:/home/dev/.npm
+      - workstation-home:/home/mario
+      - pnpm-store:/home/mario/.local/share/pnpm/store
+      - npm-cache:/home/mario/.npm
     networks:
       - webnet
 
@@ -52,7 +52,7 @@ services:
   prod-web:
     build:
       context: ${PROJECTS_PATH:-/mariomedrano/projects}/${APP_NAME:-ajedrezlapaz}
-      dockerfile: /Users/mariomedrano/Documents/Codex/2026-05-17/create-a-docker-container-for-my/docker/prod-web/Dockerfile
+      dockerfile: /Users/mariomedrano/Personal/dev-containers/docker/prod-web/Dockerfile
     image: ${PROJECT_NAME:-web-workstation}-prod-web
     container_name: ${PROJECT_NAME:-web-workstation}-prod-web
     environment:

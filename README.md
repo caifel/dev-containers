@@ -11,7 +11,7 @@ Your project source lives outside this folder:
 This Docker setup lives here:
 
 ```txt
-/Users/mariomedrano/Documents/Codex/2026-05-17/create-a-docker-container-for-my
+/Users/mariomedrano/Personal/dev-containers
 ```
 
 ## Containers
@@ -64,7 +64,7 @@ The result:
 - Node.js 22
 - `pnpm`, `npm`, `yarn`
 - TypeScript, TSX, Create Next App, Nest CLI
-- `ripgrep`, `fd`, `fzf`, `jq`, `yq`, `eza`, `bat`, `tree`, `htop`
+- `ripgrep`, `fd`, `fzf`, `jq`, `yq`, `bat`, `tree`, `htop`
 
 The image does not bake in shell, tmux, Neovim, or lazygit config files. Your dotfiles repo should own those.
 
@@ -162,7 +162,7 @@ Database containers and database client tools are intentionally not part of this
 
 If Docker Desktop cannot mount `/mariomedrano/projects`, add that path to Docker Desktop file sharing settings, or change `PROJECTS_PATH` in `.env`.
 
-The `workstation-home` volume keeps your dotfiles clone, shell history, LazyVim plugins, and tool state between rebuilds.
+The `workstation-home` volume is mounted at `/home/mario` and keeps your dotfiles clone, shell history, LazyVim plugins, and tool state between rebuilds.
 
 To reset all Docker volumes:
 

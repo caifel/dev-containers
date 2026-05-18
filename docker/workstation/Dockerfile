@@ -1,10 +1,8 @@
-FROM debian:bookworm-slim
+FROM node:22-bookworm-slim
 
-ARG USERNAME=dev
-ARG USER_UID=1000
-ARG USER_GID=1000
-ARG NODE_VERSION=22
+ARG USERNAME=mario
 ARG LAZYGIT_VERSION=0.44.1
+ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
     SHELL=/bin/zsh \
@@ -40,26 +38,29 @@ RUN apt-get update \
       less \
       man-db \
       bat \
-      eza \
       shellcheck \
-    && install -d -m 0755 /etc/apt/keyrings \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_VERSION}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends nodejs \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
     && ln -sf /usr/bin/batcat /usr/local/bin/bat \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz" \
+RUN case "${TARGETARCH}" in \
+      amd64) NVIM_ARCH="x86_64"; LAZYGIT_ARCH="x86_64" ;; \
+      arm64) NVIM_ARCH="arm64"; LAZYGIT_ARCH="arm64" ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${NVIM_ARCH}.tar.gz" \
       | tar -xz -C /opt \
-    && ln -s /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim \
-    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" \
+    && ln -s "/opt/nvim-linux-${NVIM_ARCH}/bin/nvim" /usr/local/bin/nvim \
+    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LAZYGIT_ARCH}.tar.gz" \
       | tar -xz -C /usr/local/bin lazygit \
-    && npm install -g npm@latest pnpm yarn typescript tsx create-next-app @nestjs/cli
+    && corepack enable \
+    && corepack prepare pnpm@latest --activate \
+    && corepack prepare yarn@stable --activate \
+    && npm install -g typescript tsx create-next-app @nestjs/cli
 
-RUN groupadd --gid ${USER_GID} ${USERNAME} \
-    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} --shell /bin/zsh \
+RUN groupmod --new-name ${USERNAME} node \
+    && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} node \
+    && chsh --shell /bin/zsh ${USERNAME} \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
     && chmod 0440 /etc/sudoers.d/${USERNAME} \
     && mkdir -p /workspace/projects /home/${USERNAME}/.config /home/${USERNAME}/.local/share/pnpm \
