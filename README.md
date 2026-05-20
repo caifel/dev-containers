@@ -22,7 +22,7 @@ The Compose stack has three main containers:
 - `dev-web`: runs the `ajedrezlapaz` Next.js app in development mode.
 - `prod-web`: builds and runs the `ajedrezlapaz` Next.js app in production mode.
 
-All three custom images use Debian Bookworm slim bases. The workstation uses `debian:bookworm-slim`; the app containers use `node:22-bookworm-slim`.
+All three custom images use Debian Bookworm slim bases. The workstation and app containers use `node:22-bookworm-slim`.
 
 ## How The Containers Connect
 
@@ -64,17 +64,37 @@ The result:
 - Node.js 22
 - `pnpm`, `npm`, `yarn`
 - TypeScript, TSX, Create Next App, Nest CLI
+- `tree-sitter-cli` for Neovim parser builds
 - `ripgrep`, `fd`, `fzf`, `jq`, `yq`, `bat`, `tree`, `htop`
 
 The image does not bake in shell, tmux, Neovim, or lazygit config files. Your dotfiles repo should own those.
 
-Example inside `workstation`:
+This setup uses your Linux workstation dotfiles fork under the shared projects directory:
 
 ```sh
-git clone git@github.com:YOUR_USER/YOUR_DOTFILES.git ~/.dotfiles
-cd ~/.dotfiles
-./install.sh
+cd /workspace/projects
+git clone git@github.com:caifel/dotfiles.git .dotfiles
+cd .dotfiles
+git checkout linux-workstation
 ```
+
+Inspect before symlinking:
+
+```sh
+find . -maxdepth 3 -type f | sort
+```
+
+Link the active workstation configs into the home directory:
+
+```sh
+mkdir -p ~/.config
+ln -s /workspace/projects/.dotfiles/.zshrc ~/.zshrc
+ln -s /workspace/projects/.dotfiles/.config/nvim ~/.config/nvim
+ln -s /workspace/projects/.dotfiles/.config/tmux ~/.config/tmux
+ln -s /workspace/projects/.dotfiles/.config/lazygit ~/.config/lazygit
+```
+
+The dotfiles originally came from Lazar Nikolov's macOS-oriented dotfiles, but this branch keeps only the Linux container pieces used by this workstation.
 
 Then clone your project:
 
@@ -110,6 +130,36 @@ Or:
 make build
 make up
 make shell
+```
+
+## GitHub SSH From Workstation
+
+This setup treats `workstation` as your real development machine, so GitHub SSH should live inside the container. That keeps `git`, `lazygit`, private clones, pulls, and pushes working from the same place where you use `tmux` and Neovim.
+
+The SSH key is stored in the persistent `workstation-home` Docker volume at `/home/mario/.ssh`, so it survives image rebuilds. If you delete Docker volumes with `make clean`, you will need to recreate the key.
+
+Inside the workstation container:
+
+```sh
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -C "mario@web-workstation" -f ~/.ssh/id_ed25519_github
+cat > ~/.ssh/config <<'EOF'
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+  AddKeysToAgent no
+EOF
+chmod 600 ~/.ssh/config ~/.ssh/id_ed25519_github
+cat ~/.ssh/id_ed25519_github.pub
+```
+
+Add the printed public key to GitHub under SSH keys, then verify:
+
+```sh
+ssh -T git@github.com
 ```
 
 Run the Next.js app in development mode:

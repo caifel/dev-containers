@@ -2,9 +2,12 @@ FROM node:22-bookworm-slim
 
 ARG USERNAME=mario
 ARG LAZYGIT_VERSION=0.44.1
+ARG PNPM_VERSION=11.1.3
 ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
     SHELL=/bin/zsh \
     EDITOR=nvim \
     VISUAL=nvim \
@@ -38,6 +41,7 @@ RUN apt-get update \
       less \
       man-db \
       bat \
+      lsof \
       shellcheck \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
     && ln -sf /usr/bin/batcat /usr/local/bin/bat \
@@ -53,10 +57,7 @@ RUN case "${TARGETARCH}" in \
     && ln -s "/opt/nvim-linux-${NVIM_ARCH}/bin/nvim" /usr/local/bin/nvim \
     && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LAZYGIT_ARCH}.tar.gz" \
       | tar -xz -C /usr/local/bin lazygit \
-    && corepack enable \
-    && corepack prepare pnpm@latest --activate \
-    && corepack prepare yarn@stable --activate \
-    && npm install -g typescript tsx create-next-app @nestjs/cli
+    && npm install -g pnpm@${PNPM_VERSION} typescript tsx create-next-app tree-sitter-cli@0.22.6
 
 RUN groupmod --new-name ${USERNAME} node \
     && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} node \

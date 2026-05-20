@@ -1,17 +1,20 @@
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ARG PNPM_VERSION=11.1.3
+
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
       ca-certificates \
+    && npm install -g pnpm@${PNPM_VERSION} \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN corepack enable \
-    && corepack prepare pnpm@latest --activate \
-    && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .

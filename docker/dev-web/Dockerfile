@@ -1,7 +1,10 @@
 FROM node:22-bookworm-slim
 
-ENV PNPM_HOME=/home/node/.local/share/pnpm \
-    PATH=/home/node/.local/share/pnpm:$PATH \
+ARG USERNAME=mario
+ARG PNPM_VERSION=11.1.3
+
+ENV PNPM_HOME=/home/${USERNAME}/.local/share/pnpm \
+    PATH=/home/${USERNAME}/.local/share/pnpm:$PATH \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN apt-get update \
@@ -10,13 +13,14 @@ RUN apt-get update \
       curl \
       git \
       openssl \
-    && corepack enable \
-    && corepack prepare pnpm@latest --activate \
-    && mkdir -p /home/node/.local/share/pnpm/store /app \
-    && chown -R node:node /home/node /app \
+    && npm install -g pnpm@${PNPM_VERSION} \
+    && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} node \
+    && groupmod --new-name ${USERNAME} node \
+    && mkdir -p /home/${USERNAME}/.local/share/pnpm/store /app/node_modules \
+    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME} /app \
     && rm -rf /var/lib/apt/lists/*
 
-USER node
+USER ${USERNAME}
 WORKDIR /app
 
 CMD ["pnpm", "dev", "--hostname", "0.0.0.0"]

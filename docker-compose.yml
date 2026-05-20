@@ -5,12 +5,15 @@ services:
       dockerfile: docker/workstation/Dockerfile
     image: ${PROJECT_NAME:-web-workstation}-workstation
     container_name: ${PROJECT_NAME:-web-workstation}-workstation
+    hostname: workstation
     working_dir: /workspace/projects
     command: zsh
     tty: true
     stdin_open: true
     environment:
       NODE_ENV: development
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
       SHELL: /bin/zsh
       EDITOR: nvim
       VISUAL: nvim
@@ -45,7 +48,7 @@ services:
     volumes:
       - ${PROJECTS_PATH:-/mariomedrano/projects}/${APP_NAME:-ajedrezlapaz}:/app
       - dev-web-node-modules:/app/node_modules
-      - pnpm-store:/home/node/.local/share/pnpm/store
+      - pnpm-store:/home/mario/.local/share/pnpm/store
     networks:
       - webnet
 
