@@ -1,8 +1,7 @@
-FROM node:22-bookworm-slim
+FROM oven/bun:1-debian
 
 ARG USERNAME=mario
 ARG LAZYGIT_VERSION=0.44.1
-ARG PNPM_VERSION=11.1.3
 ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -11,8 +10,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     SHELL=/bin/zsh \
     EDITOR=nvim \
     VISUAL=nvim \
-    PNPM_HOME=/home/${USERNAME}/.local/share/pnpm \
-    PATH=/home/${USERNAME}/.local/share/pnpm:$PATH
+    BUN_INSTALL=/home/${USERNAME}/.bun \
+    PATH=/home/${USERNAME}/.bun/bin:$PATH
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -32,13 +31,18 @@ RUN apt-get update \
       jq \
       yq \
       tree \
-      htop \
-      tmux \
-      zsh \
-      sudo \
-      openssh-client \
-      rsync \
-      less \
+	      htop \
+	      tmux \
+	      zsh \
+	      sudo \
+	      openssh-client \
+	      openssl \
+      nodejs \
+      npm \
+	      sqlite3 \
+	      libsqlite3-dev \
+	      rsync \
+	      less \
       man-db \
       bat \
       lsof \
@@ -57,25 +61,26 @@ RUN case "${TARGETARCH}" in \
     && ln -s "/opt/nvim-linux-${NVIM_ARCH}/bin/nvim" /usr/local/bin/nvim \
     && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LAZYGIT_ARCH}.tar.gz" \
       | tar -xz -C /usr/local/bin lazygit \
-    && npm install -g pnpm@${PNPM_VERSION} typescript tsx create-next-app tree-sitter-cli@0.22.6
+    && BUN_INSTALL=/usr/local bun install -g typescript tsx create-next-app tree-sitter-cli@0.22.6 \
+    && curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin
 
-RUN groupmod --new-name ${USERNAME} node \
-    && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} node \
+RUN groupmod --new-name ${USERNAME} bun \
+    && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} bun \
     && chsh --shell /bin/zsh ${USERNAME} \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
     && chmod 0440 /etc/sudoers.d/${USERNAME} \
-    && mkdir -p /workspace/projects /home/${USERNAME}/.config /home/${USERNAME}/.local/share/pnpm \
-    && chown -R ${USERNAME}:${USERNAME} /workspace /home/${USERNAME}
+    && mkdir -p /alp /home/${USERNAME}/.config /home/${USERNAME}/.bun/install/cache \
+    && chown -R ${USERNAME}:${USERNAME} /alp /home/${USERNAME}
 
-COPY docker/workstation/entrypoint.sh /usr/local/bin/workstation-entrypoint
+COPY docker/ws/entrypoint.sh /usr/local/bin/ws-entrypoint
 
-RUN chmod +x /usr/local/bin/workstation-entrypoint \
+RUN chmod +x /usr/local/bin/ws-entrypoint \
     && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
 
 USER ${USERNAME}
-WORKDIR /workspace/projects
+WORKDIR /alp
 
-RUN mkdir -p ~/.config ~/.local/share/pnpm/store ~/.npm ~/.cache
+RUN mkdir -p ~/.config ~/.bun/install/cache ~/.cache
 
-ENTRYPOINT ["workstation-entrypoint"]
+ENTRYPOINT ["ws-entrypoint"]
 CMD ["zsh"]

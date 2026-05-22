@@ -1,10 +1,9 @@
-FROM node:22-bookworm-slim
+FROM oven/bun:1-debian
 
 ARG USERNAME=mario
-ARG PNPM_VERSION=11.1.3
 
-ENV PNPM_HOME=/home/${USERNAME}/.local/share/pnpm \
-    PATH=/home/${USERNAME}/.local/share/pnpm:$PATH \
+ENV BUN_INSTALL=/home/${USERNAME}/.bun \
+    PATH=/home/${USERNAME}/.bun/bin:$PATH \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN apt-get update \
@@ -13,14 +12,13 @@ RUN apt-get update \
       curl \
       git \
       openssl \
-    && npm install -g pnpm@${PNPM_VERSION} \
-    && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} node \
-    && groupmod --new-name ${USERNAME} node \
-    && mkdir -p /home/${USERNAME}/.local/share/pnpm/store /app/node_modules \
-    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME} /app \
+    && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} bun \
+    && groupmod --new-name ${USERNAME} bun \
+    && mkdir -p /home/${USERNAME}/.bun/install/cache /alp/web/node_modules \
+    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME} /alp/web \
     && rm -rf /var/lib/apt/lists/*
 
 USER ${USERNAME}
-WORKDIR /app
+WORKDIR /alp/web
 
-CMD ["pnpm", "dev", "--hostname", "0.0.0.0"]
+CMD ["bun", "--bun", "run", "dev", "--hostname", "0.0.0.0"]

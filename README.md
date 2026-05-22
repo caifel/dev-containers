@@ -5,108 +5,131 @@ This folder defines the Docker containers for your web development workflow.
 Your project source lives outside this folder:
 
 ```txt
-/mariomedrano/projects/ajedrezlapaz
+/Users/mariomedrano/Projects/ajedrezlapaz/web
 ```
 
 This Docker setup lives here:
 
 ```txt
-/Users/mariomedrano/Personal/dev-containers
+/Users/mariomedrano/Projects/ajedrezlapaz/ops
 ```
 
 ## Containers
 
-The Compose stack has three main containers:
+The development Compose stack has three main containers:
 
-- `workstation`: your interactive development machine with terminal tools.
+- `ws`: your interactive development machine with terminal tools.
 - `dev-web`: runs the `ajedrezlapaz` Next.js app in development mode.
-- `prod-web`: builds and runs the `ajedrezlapaz` Next.js app in production mode.
+- `dev-api`: runs the Elysia API with Bun and SQLite.
 
-All three custom images use Debian Bookworm slim bases. The workstation and app containers use `node:22-bookworm-slim`.
+Production-like local testing lives in `docker-compose.prod.yml`:
+
+- `prod-web`: builds and runs the `ajedrezlapaz` Next.js app in production mode.
+- `prod-api`: builds and runs the Elysia API in production mode.
+
+All custom images use Debian Bookworm slim bases through `oven/bun:1-debian`.
 
 ## How The Containers Connect
 
-`workstation` mounts your host projects directory:
+`ws` mounts your host projects directory:
 
 ```txt
-/mariomedrano/projects -> /workspace/projects
+/Users/mariomedrano/Projects/ajedrezlapaz/web -> /alp/web
+/Users/mariomedrano/Projects/ajedrezlapaz/api -> /alp/api
 ```
 
-So inside `workstation`, your app path is:
+So inside `ws`, your app path is:
 
 ```txt
-/workspace/projects/ajedrezlapaz
+/alp/web
 ```
 
 `dev-web` mounts only that app:
 
 ```txt
-/mariomedrano/projects/ajedrezlapaz -> /app
+/Users/mariomedrano/Projects/ajedrezlapaz/web -> /alp/web
 ```
 
-`prod-web` uses the same app folder as its Docker build context.
+`dev-api` mounts your API project:
+
+```txt
+/Users/mariomedrano/Projects/ajedrezlapaz/api -> /alp/api
+```
+
+`prod-web` and `prod-api` use the app folders as Docker build contexts from the standalone `docker-compose.prod.yml` file.
 
 The result:
 
-- edit code in `workstation`
+- edit code in `ws`
 - run the Next.js dev server in `dev-web`
-- build/run the production image with `prod-web`
+- run the Elysia API in `dev-api`
+- build/run production-like images with `prod-web` and `prod-api`
 
-## Workstation
+## WS
 
-`workstation` includes:
+`ws` includes:
 
 - `zsh`
 - `tmux`
 - Neovim
 - `git`
 - `lazygit`
-- Node.js 22
-- `pnpm`, `npm`, `yarn`
-- TypeScript, TSX, Create Next App, Nest CLI
+- Bun
+- TypeScript, TSX, Create Next App
 - `tree-sitter-cli` for Neovim parser builds
+- SQLite CLI and development headers
 - `ripgrep`, `fd`, `fzf`, `jq`, `yq`, `bat`, `tree`, `htop`
 
 The image does not bake in shell, tmux, Neovim, or lazygit config files. Your dotfiles repo should own those.
 
-This setup uses your Linux workstation dotfiles fork under the shared projects directory:
+This setup uses your Linux workstation dotfiles fork from:
 
-```sh
-cd /workspace/projects
-git clone git@github.com:caifel/dotfiles.git .dotfiles
-cd .dotfiles
-git checkout linux-workstation
+```txt
+/Users/mariomedrano/Dev/.dotfiles -> /alp/dotfiles
 ```
 
 Inspect before symlinking:
 
 ```sh
-find . -maxdepth 3 -type f | sort
+find /alp/dotfiles -maxdepth 3 -type f | sort
 ```
 
-Link the active workstation configs into the home directory:
+Link the active ws configs into the home directory:
 
 ```sh
 mkdir -p ~/.config
-ln -s /workspace/projects/.dotfiles/.zshrc ~/.zshrc
-ln -s /workspace/projects/.dotfiles/.config/nvim ~/.config/nvim
-ln -s /workspace/projects/.dotfiles/.config/tmux ~/.config/tmux
-ln -s /workspace/projects/.dotfiles/.config/lazygit ~/.config/lazygit
+ln -s /alp/dotfiles/.zshrc ~/.zshrc
+ln -s /alp/dotfiles/.config/nvim ~/.config/nvim
+ln -s /alp/dotfiles/.config/tmux ~/.config/tmux
+ln -s /alp/dotfiles/.config/lazygit ~/.config/lazygit
 ```
 
-The dotfiles originally came from Lazar Nikolov's macOS-oriented dotfiles, but this branch keeps only the Linux container pieces used by this workstation.
+The dotfiles originally came from Lazar Nikolov's macOS-oriented dotfiles, but this branch keeps only the Linux container pieces used by `ws`.
 
 Then clone your project:
 
 ```sh
-cd /workspace/projects
-git clone git@github.com:YOUR_USER/ajedrezlapaz.git
+cd /alp
+git clone git@github.com:YOUR_USER/ajedrezlapaz.git web
 ```
 
 That writes to:
 
 ```txt
-/mariomedrano/projects/ajedrezlapaz
+/Users/mariomedrano/Projects/ajedrezlapaz/web
+```
+
+For the API, clone or create:
+
+```sh
+cd /alp
+git clone git@github.com:YOUR_USER/ajedrezlapaz-api.git api
+```
+
+That writes to:
+
+```txt
+/Users/mariomedrano/Projects/ajedrezlapaz/api
 ```
 
 ## Quick Start
@@ -117,33 +140,46 @@ Copy the example environment file if you want to customize paths or ports:
 cp .env.example .env
 ```
 
-Start the workstation:
+Start only the ws:
 
 ```sh
-docker compose up -d --build workstation
-docker compose exec workstation zsh
+docker compose up -d --build ws
+docker compose exec ws zsh
 ```
 
-Or:
+Or, with Make:
+
+```sh
+make build
+make up-ws
+make shell
+```
+
+Start the full development stack:
 
 ```sh
 make build
 make up
-make shell
 ```
 
-## GitHub SSH From Workstation
+Display the development command reference:
 
-This setup treats `workstation` as your real development machine, so GitHub SSH should live inside the container. That keeps `git`, `lazygit`, private clones, pulls, and pushes working from the same place where you use `tmux` and Neovim.
+```sh
+make help
+```
 
-The SSH key is stored in the persistent `workstation-home` Docker volume at `/home/mario/.ssh`, so it survives image rebuilds. If you delete Docker volumes with `make clean`, you will need to recreate the key.
+## GitHub SSH From WS
 
-Inside the workstation container:
+This setup treats `ws` as your real development machine, so GitHub SSH should live inside the container. That keeps `git`, `lazygit`, private clones, pulls, and pushes working from the same place where you use `tmux` and Neovim.
+
+The SSH key is stored in the persistent `ws-home` Docker volume at `/home/mario/.ssh`, so it survives image rebuilds. If you delete Docker volumes with `make clean`, you will need to recreate the key.
+
+Inside the ws container:
 
 ```sh
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-ssh-keygen -t ed25519 -C "mario@web-workstation" -f ~/.ssh/id_ed25519_github
+ssh-keygen -t ed25519 -C "mario@web-dev" -f ~/.ssh/id_ed25519_github
 cat > ~/.ssh/config <<'EOF'
 Host github.com
   HostName github.com
@@ -174,15 +210,80 @@ Open:
 http://localhost:3000
 ```
 
-## Production Web
+## Backend API
+
+`dev-api` expects an Elysia/Bun API at:
+
+```txt
+/Users/mariomedrano/Projects/ajedrezlapaz/api
+```
+
+Inside the container, SQLite lives at:
+
+```txt
+/alp/api/data/app.db
+```
+
+The app receives:
+
+```txt
+DATABASE_URL=file:/alp/api/data/app.db
+SQLITE_PATH=/alp/api/data/app.db
+```
+
+Run the API:
+
+```sh
+docker compose up --build dev-api
+```
+
+Or:
+
+```sh
+make dev-api
+```
+
+Open:
+
+```txt
+http://localhost:4000
+```
+
+Open a shell in the API container:
+
+```sh
+make dev-api-shell
+```
+
+Open the SQLite database:
+
+```sh
+make dev-api-sqlite
+```
+
+For Elysia + Drizzle with SQLite, install app dependencies inside the API project:
+
+```sh
+bun add elysia drizzle-orm
+bun add -D drizzle-kit
+```
+
+Use generated migrations for durable schema changes:
+
+```sh
+bunx drizzle-kit generate
+bunx drizzle-kit migrate
+```
+
+## Production
 
 `prod-web` expects your Next.js app at:
 
 ```txt
-/mariomedrano/projects/ajedrezlapaz
+/Users/mariomedrano/Projects/ajedrezlapaz/web
 ```
 
-It uses `pnpm`, runs the app build, and starts the Next.js standalone server on port `8080`.
+It uses Bun, runs the app build, and starts the Next.js standalone server with Bun on port `8080`.
 
 For best production output, your app should set this in `next.config.mjs` or `next.config.js`:
 
@@ -197,22 +298,41 @@ export default nextConfig;
 Run production:
 
 ```sh
-docker compose up --build prod-web
+docker compose -f docker-compose.prod.yml up --build prod-web prod-api
+```
+
+Or:
+
+```sh
+make prod
 ```
 
 Open:
 
 ```txt
 http://localhost:8080
+http://localhost:8081
+```
+
+Run only the web production container:
+
+```sh
+make prod-web
+```
+
+Run only the API production container:
+
+```sh
+make prod-api
 ```
 
 ## Notes
 
-Database containers and database client tools are intentionally not part of this setup. Add PostgreSQL, MySQL, Redis, or other database tooling on demand per project.
+Development SQLite data is stored in the `dev-api-sqlite-data` Docker volume. Production API SQLite data is stored in the `prod-api-sqlite-data` Docker volume. If you run `docker compose down -v`, both local API databases are deleted.
 
-If Docker Desktop cannot mount `/mariomedrano/projects`, add that path to Docker Desktop file sharing settings, or change `PROJECTS_PATH` in `.env`.
+If Docker Desktop cannot mount `/Users/mariomedrano/Projects/ajedrezlapaz`, add that path to Docker Desktop file sharing settings, or change `WEB_PATH`, `API_PATH`, or `DOTFILES_PATH` in `.env`.
 
-The `workstation-home` volume is mounted at `/home/mario` and keeps your dotfiles clone, shell history, LazyVim plugins, and tool state between rebuilds.
+The `ws-home` volume is mounted at `/home/mario` and keeps your dotfiles clone, shell history, LazyVim plugins, and tool state between rebuilds.
 
 To reset all Docker volumes:
 

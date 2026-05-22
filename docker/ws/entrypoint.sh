@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-mkdir -p "$HOME/.ssh" "$HOME/.config" "$HOME/.cache" "$HOME/.local/share/pnpm/store" /workspace/projects
+mkdir -p "$HOME/.ssh" "$HOME/.config" "$HOME/.cache" "$HOME/.bun/install/cache" /alp
 chmod 700 "$HOME/.ssh"
 
-DOTFILES_DIR="/workspace/projects/.dotfiles"
+DOTFILES_DIR="/alp/dotfiles"
 
 link_dotfile() {
   local source_path="$1"

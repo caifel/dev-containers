@@ -1,27 +1,22 @@
-FROM node:22-bookworm-slim AS deps
+FROM oven/bun:1-debian AS deps
 WORKDIR /app
 
-ARG PNPM_VERSION=11.1.3
-
-ENV NEXT_TELEMETRY_DISABLED=1 \
-    PNPM_HOME=/pnpm \
-    PATH=/pnpm:$PATH
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
       ca-certificates \
-    && npm install -g pnpm@${PNPM_VERSION} \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN pnpm install --frozen-lockfile
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
 RUN mkdir -p public
-RUN pnpm build
+RUN bun --bun run build
 
-FROM node:22-bookworm-slim AS runner
+FROM oven/bun:1-debian AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -29,14 +24,14 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=8080
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN groupadd --system --gid 1001 nodejs \
-    && useradd --system --uid 1001 --gid nodejs nextjs
+RUN groupadd --system --gid 1001 bunjs \
+    && useradd --system --uid 1001 --gid bunjs nextjs
 
 COPY --from=build /app/public ./public
-COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=build --chown=nextjs:bunjs /app/.next/standalone ./
+COPY --from=build --chown=nextjs:bunjs /app/.next/static ./.next/static
 
 USER nextjs
 EXPOSE 8080
 
-CMD ["node", "server.js"]
+CMD ["bun", "server.js"]

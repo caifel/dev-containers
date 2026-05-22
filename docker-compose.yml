@@ -1,12 +1,14 @@
+name: ${PROJECT_NAME:-ajedrezlapaz}
+
 services:
-  workstation:
+  ws:
     build:
       context: .
-      dockerfile: docker/workstation/Dockerfile
-    image: ${PROJECT_NAME:-web-workstation}-workstation
-    container_name: ${PROJECT_NAME:-web-workstation}-workstation
-    hostname: workstation
-    working_dir: /workspace/projects
+      dockerfile: docker/ws/Dockerfile
+    image: ${PROJECT_NAME:-ajedrezlapaz}-ws
+    container_name: ${PROJECT_NAME:-ajedrezlapaz}-ws
+    hostname: dev
+    working_dir: /alp
     command: zsh
     tty: true
     stdin_open: true
@@ -20,10 +22,11 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     volumes:
-      - ${PROJECTS_PATH:-/mariomedrano/projects}:/workspace/projects
-      - workstation-home:/home/mario
-      - pnpm-store:/home/mario/.local/share/pnpm/store
-      - npm-cache:/home/mario/.npm
+      - ${WEB_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/web}:/alp/web
+      - ${API_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/api}:/alp/api
+      - ${DOTFILES_PATH:-/Users/mariomedrano/Dev/.dotfiles}:/alp/dotfiles:ro
+      - ws-home:/home/mario
+      - ws-bun-cache:/home/mario/.bun/install/cache
     networks:
       - webnet
 
@@ -31,10 +34,11 @@ services:
     build:
       context: .
       dockerfile: docker/dev-web/Dockerfile
-    image: ${PROJECT_NAME:-web-workstation}-dev-web
-    container_name: ${PROJECT_NAME:-web-workstation}-dev-web
-    working_dir: /app
-    command: sh -lc "pnpm install && pnpm dev --hostname 0.0.0.0"
+    image: ${PROJECT_NAME:-ajedrezlapaz}-dev-web
+    container_name: ${PROJECT_NAME:-ajedrezlapaz}-dev-web
+    hostname: dev
+    working_dir: /alp/web
+    command: sh -lc "bun install && bun --bun run dev --hostname 0.0.0.0"
     tty: true
     stdin_open: true
     environment:
@@ -46,22 +50,34 @@ services:
       - "${DEV_WEB_PORT:-3000}:3000"
       - "9229:9229"
     volumes:
-      - ${PROJECTS_PATH:-/mariomedrano/projects}/${APP_NAME:-ajedrezlapaz}:/app
-      - dev-web-node-modules:/app/node_modules
-      - pnpm-store:/home/mario/.local/share/pnpm/store
+      - ${WEB_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/web}:/alp/web
+      - dev-web-node-modules:/alp/web/node_modules
+      - dev-web-bun-cache:/home/mario/.bun/install/cache
     networks:
       - webnet
 
-  prod-web:
+  dev-api:
     build:
-      context: ${PROJECTS_PATH:-/mariomedrano/projects}/${APP_NAME:-ajedrezlapaz}
-      dockerfile: /Users/mariomedrano/Personal/dev-containers/docker/prod-web/Dockerfile
-    image: ${PROJECT_NAME:-web-workstation}-prod-web
-    container_name: ${PROJECT_NAME:-web-workstation}-prod-web
+      context: .
+      dockerfile: docker/dev-api/Dockerfile
+    image: ${PROJECT_NAME:-ajedrezlapaz}-dev-api
+    container_name: ${PROJECT_NAME:-ajedrezlapaz}-dev-api
+    hostname: dev
+    working_dir: /alp/api
+    command: sh -lc "bun install && bun run dev"
+    tty: true
+    stdin_open: true
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
+      DATABASE_URL: ${DATABASE_URL:-file:/alp/api/data/app.db}
+      SQLITE_PATH: ${SQLITE_PATH:-/alp/api/data/app.db}
     ports:
-      - "${PROD_WEB_PORT:-8080}:8080"
+      - "${API_PORT:-4000}:4000"
+    volumes:
+      - ${API_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/api}:/alp/api
+      - dev-api-node-modules:/alp/api/node_modules
+      - dev-api-bun-cache:/home/mario/.bun/install/cache
+      - dev-api-sqlite-data:/alp/api/data
     networks:
       - webnet
 
@@ -70,7 +86,10 @@ networks:
     driver: bridge
 
 volumes:
-  workstation-home:
-  pnpm-store:
-  npm-cache:
+  ws-home:
+  ws-bun-cache:
   dev-web-node-modules:
+  dev-web-bun-cache:
+  dev-api-node-modules:
+  dev-api-bun-cache:
+  dev-api-sqlite-data:
