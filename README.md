@@ -1,6 +1,6 @@
 # Docker Web Development Environment
 
-This folder defines the Docker containers for your web development workflow.
+This folder defines the Docker containers for your web development workflow. Docker through this `ops` project is the only supported local development path.
 
 Your project source lives outside this folder:
 
@@ -61,9 +61,15 @@ So inside `ws`, your app path is:
 The result:
 
 - edit code in `ws`
-- run the Next.js dev server in `dev-web`
-- run the Elysia API in `dev-api`
+- run the integrated dev stack with `dev-web` and `dev-api` together
+- regenerate web API types from the fresh `dev-api` Swagger schema during startup
 - build/run production-like images with `prod-web` and `prod-api`
+
+Runtime configuration lives in this folder:
+
+- `ops/.env` is the local source of truth for Docker dev and production-like local runs.
+- `ops/.env.example` documents the required variables.
+- `web/.env.local` and `api/.env` are intentionally not used by the supported dev workflow.
 
 ## WS
 
@@ -75,6 +81,9 @@ The result:
 - `git`
 - `lazygit`
 - Bun
+- nvm
+- default Node.js LTS through nvm
+- Deep Code CLI
 - TypeScript, TSX, Create Next App
 - `tree-sitter-cli` for Neovim parser builds
 - SQLite CLI and development headers
@@ -106,6 +115,14 @@ ln -s /alp/dotfiles/.config/lazygit ~/.config/lazygit
 
 The dotfiles originally came from Lazar Nikolov's macOS-oriented dotfiles, but this branch keeps only the Linux container pieces used by `ws`.
 
+Deep Code settings are generated from your private dotfiles environment file:
+
+```txt
+/Users/mariomedrano/Dev/.dotfiles/.env -> /home/mario/.deepcode/settings.json
+```
+
+Use `/Users/mariomedrano/Dev/.dotfiles/.env.example` as the template. The real `.env` is ignored by git.
+
 Then clone your project:
 
 ```sh
@@ -134,32 +151,66 @@ That writes to:
 
 ## Quick Start
 
-Copy the example environment file if you want to customize paths or ports:
+Copy the example environment file and fill the local Docker values:
 
 ```sh
 cp .env.example .env
 ```
 
-Start only the ws:
+Start the independent workstation:
 
 ```sh
-docker compose up -d --build ws
-docker compose exec ws zsh
+make up-ws
 ```
 
-Or, with Make:
+Open a shell in `ws`:
 
 ```sh
-make build
-make up-ws
 make shell
 ```
 
-Start the full development stack:
+Start the integrated app stack:
 
 ```sh
-make build
 make up
+```
+
+This starts/recreates:
+
+- `dev-api`
+- `dev-web`
+
+It starts the pair if needed, waits for `dev-api` Swagger from inside the Docker network, and regenerates the web API types.
+
+That Swagger/type sync is implemented in:
+
+```sh
+scripts/sync-api-types.sh
+```
+
+After changing API routes, response schemas, or Swagger-visible contracts, run:
+
+```sh
+make up
+```
+
+To refresh or check generated types without recreating the app stack:
+
+```sh
+make api-types
+make api-types-check
+```
+
+Stop the integrated app stack:
+
+```sh
+make down
+```
+
+Stop the independent workstation:
+
+```sh
+make down-ws
 ```
 
 Display the development command reference:
@@ -198,10 +249,10 @@ Add the printed public key to GitHub under SSH keys, then verify:
 ssh -T git@github.com
 ```
 
-Run the Next.js app in development mode:
+Run the integrated app stack:
 
 ```sh
-docker compose up --build dev-web
+make up
 ```
 
 Open:
@@ -231,16 +282,10 @@ DATABASE_URL=file:/alp/api/data/app.db
 SQLITE_PATH=/alp/api/data/app.db
 ```
 
-Run the API:
+Run the integrated app stack:
 
 ```sh
-docker compose up --build dev-api
-```
-
-Or:
-
-```sh
-make dev-api
+make up
 ```
 
 Open:
@@ -252,13 +297,13 @@ http://localhost:4000
 Open a shell in the API container:
 
 ```sh
-make dev-api-shell
+make shell-api
 ```
 
 Open the SQLite database:
 
 ```sh
-make dev-api-sqlite
+make sqlite-api
 ```
 
 For Elysia + Drizzle with SQLite, install app dependencies inside the API project:

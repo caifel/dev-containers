@@ -44,11 +44,11 @@ services:
     environment:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: "1"
+      API_URL: http://dev-api:4000
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     ports:
       - "${DEV_WEB_PORT:-3000}:3000"
-      - "9229:9229"
     volumes:
       - ${WEB_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/web}:/alp/web
       - dev-web-node-modules:/alp/web/node_modules
@@ -71,6 +71,8 @@ services:
       NODE_ENV: development
       DATABASE_URL: ${DATABASE_URL:-file:/alp/api/data/app.db}
       SQLITE_PATH: ${SQLITE_PATH:-/alp/api/data/app.db}
+      FRONTEND_URL: ${DEV_FRONTEND_URL:-http://localhost:3000}
+      CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required}
     ports:
       - "${API_PORT:-4000}:4000"
     volumes:

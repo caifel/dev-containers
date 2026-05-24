@@ -28,6 +28,37 @@ if [ -d "$DOTFILES_DIR" ]; then
   link_dotfile "$DOTFILES_DIR/.config/lazygit" "$HOME/.config/lazygit"
 fi
 
+render_deepcode_settings() {
+  if [ ! -f "$DOTFILES_DIR/.env" ]; then
+    return
+  fi
+
+  set -a
+  # shellcheck disable=SC1091
+  . "$DOTFILES_DIR/.env"
+  set +a
+
+  mkdir -p "$HOME/.deepcode"
+  jq -n \
+    --arg model "${DEEPCODE_MODEL:-deepseek-v4-pro}" \
+    --arg base_url "${DEEPCODE_BASE_URL:-https://api.deepseek.com}" \
+    --arg api_key "${DEEPCODE_API_KEY:-}" \
+    --argjson thinking_enabled "${DEEPCODE_THINKING_ENABLED:-true}" \
+    --arg reasoning_effort "${DEEPCODE_REASONING_EFFORT:-max}" \
+    '{
+      env: {
+        MODEL: $model,
+        BASE_URL: $base_url,
+        API_KEY: $api_key
+      },
+      thinkingEnabled: $thinking_enabled,
+      reasoningEffort: $reasoning_effort
+    }' > "$HOME/.deepcode/settings.json"
+  chmod 600 "$HOME/.deepcode/settings.json"
+}
+
+render_deepcode_settings
+
 if [ ! -f "$HOME/.gitconfig" ]; then
   cat > "$HOME/.gitconfig" <<'EOF'
 [init]

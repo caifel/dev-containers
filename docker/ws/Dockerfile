@@ -2,6 +2,7 @@ FROM oven/bun:1-debian
 
 ARG USERNAME=mario
 ARG LAZYGIT_VERSION=0.44.1
+ARG NVM_VERSION=0.40.3
 ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -11,46 +12,54 @@ ENV DEBIAN_FRONTEND=noninteractive \
     EDITOR=nvim \
     VISUAL=nvim \
     BUN_INSTALL=/home/${USERNAME}/.bun \
+    NVM_DIR=/usr/local/nvm \
     PATH=/home/${USERNAME}/.bun/bin:$PATH
 
+# System packages for an interactive development workstation.
+# nodejs/npm are intentionally present for Mason/LazyVim LSP installs;
+# project dependencies and app scripts still run with Bun.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+      bat \
+      build-essential \
       ca-certificates \
       curl \
-      wget \
-      git \
-      gnupg \
-      build-essential \
-      pkg-config \
-      unzip \
-      zip \
-      xz-utils \
-      ripgrep \
       fd-find \
       fzf \
+      git \
+      gnupg \
+      htop \
       jq \
-      yq \
-      tree \
-	      htop \
-	      tmux \
-	      zsh \
-	      sudo \
-	      openssh-client \
-	      openssl \
+      less \
+      libsqlite3-dev \
+      lsof \
+      man-db \
       nodejs \
       npm \
-	      sqlite3 \
-	      libsqlite3-dev \
-	      rsync \
-	      less \
-      man-db \
-      bat \
-      lsof \
+      openssh-client \
+      openssl \
+      pkg-config \
+      ripgrep \
+      rsync \
       shellcheck \
+      sqlite3 \
+      sudo \
+      tmux \
+      tree \
+      unzip \
+      wget \
+      xz-utils \
+      yq \
+      zip \
+      zsh \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
     && ln -sf /usr/bin/batcat /usr/local/bin/bat \
     && rm -rf /var/lib/apt/lists/*
 
+# Docker sets TARGETARCH for the machine doing the build.
+# Apple Silicon Macs use arm64; Intel/AMD Linux machines usually use amd64.
+# Neovim and Lazygit publish binaries with slightly different architecture names,
+# so this maps Docker's architecture value to each project's download naming.
 RUN case "${TARGETARCH}" in \
       amd64) NVIM_ARCH="x86_64"; LAZYGIT_ARCH="x86_64" ;; \
       arm64) NVIM_ARCH="arm64"; LAZYGIT_ARCH="arm64" ;; \
@@ -60,10 +69,23 @@ RUN case "${TARGETARCH}" in \
       | tar -xz -C /opt \
     && ln -s "/opt/nvim-linux-${NVIM_ARCH}/bin/nvim" /usr/local/bin/nvim \
     && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LAZYGIT_ARCH}.tar.gz" \
-      | tar -xz -C /usr/local/bin lazygit \
-    && BUN_INSTALL=/usr/local bun install -g typescript tsx create-next-app tree-sitter-cli@0.22.6 \
-    && curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin
+      | tar -xz -C /usr/local/bin lazygit
 
+# Global command-line helpers installed through Bun.
+RUN BUN_INSTALL=/usr/local bun install -g \
+      create-next-app \
+      tree-sitter-cli@0.22.6 \
+      tsx \
+      typescript
+
+# Install nvm globally; the workstation .zshrc loads it for interactive use.
+RUN mkdir -p "${NVM_DIR}" \
+    && curl -fsSL "https://github.com/nvm-sh/nvm/archive/refs/tags/v${NVM_VERSION}.tar.gz" \
+      | tar -xz --strip-components=1 -C "${NVM_DIR}" \
+    && chown -R bun:bun "${NVM_DIR}"
+
+# The Bun image already contains a non-root user named "bun".
+# Rename it to the workstation user so files in mounted volumes are owned by mario.
 RUN groupmod --new-name ${USERNAME} bun \
     && usermod --login ${USERNAME} --move-home --home /home/${USERNAME} bun \
     && chsh --shell /bin/zsh ${USERNAME} \
@@ -80,7 +102,14 @@ RUN chmod +x /usr/local/bin/ws-entrypoint \
 USER ${USERNAME}
 WORKDIR /alp
 
-RUN mkdir -p ~/.config ~/.bun/install/cache ~/.cache
+ARG NODE_VERSION=lts/*
+
+RUN mkdir -p ~/.config ~/.bun/install/cache ~/.cache \
+    && bash -lc '. "$NVM_DIR/nvm.sh" \
+      && nvm install "$NODE_VERSION" \
+      && nvm alias default "$NODE_VERSION" \
+      && npm install -g @vegamo/deepcode-cli \
+      && nvm cache clear'
 
 ENTRYPOINT ["ws-entrypoint"]
 CMD ["zsh"]

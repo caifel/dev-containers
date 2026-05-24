@@ -92,6 +92,7 @@ highlight_description() {
       -e "s/\\bws\\b/${blue}ws${reset}${white}/g" \
       -e "s/\\bdev-web\\b/${blue}dev-web${reset}${white}/g" \
       -e "s/\\bdev-api\\b/${blue}dev-api${reset}${white}/g" \
+      -e "s/\\bapi-types\\b/${blue}api-types${reset}${white}/g" \
       -e "s/\\bprod-web\\b/${blue}prod-web${reset}${white}/g" \
       -e "s/\\bprod-api\\b/${blue}prod-api${reset}${white}/g" \
       -e "s/\\bSQLite\\b/${blue}SQLite${reset}${white}/g" \
