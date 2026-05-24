@@ -16,7 +16,6 @@ FROM deps AS runner
 ENV NODE_ENV=production
 ENV PORT=8081
 ENV SQLITE_PATH=/app/data/app.db
-ENV DATABASE_URL=file:/app/data/app.db
 
 COPY . .
 

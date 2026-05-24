@@ -36,6 +36,7 @@ All custom images use Debian Bookworm slim bases through `oven/bun:1-debian`.
 ```txt
 /Users/mariomedrano/Projects/ajedrezlapaz/web -> /alp/web
 /Users/mariomedrano/Projects/ajedrezlapaz/api -> /alp/api
+/Users/mariomedrano/Projects/ajedrezlapaz/ops -> /alp/ops
 ```
 
 So inside `ws`, your app path is:
@@ -180,7 +181,7 @@ This starts/recreates:
 - `dev-api`
 - `dev-web`
 
-It starts the pair if needed, waits for `dev-api` Swagger from inside the Docker network, and regenerates the web API types.
+It starts the pair if needed. `dev-api` applies pending migrations before serving, then the ops sync waits for Swagger from inside the Docker network and regenerates the web API types.
 
 That Swagger/type sync is implemented in:
 
@@ -275,12 +276,13 @@ Inside the container, SQLite lives at:
 /alp/api/data/app.db
 ```
 
-The app receives:
+The app receives one SQLite source of truth:
 
 ```txt
-DATABASE_URL=file:/alp/api/data/app.db
 SQLITE_PATH=/alp/api/data/app.db
 ```
+
+Drizzle derives `DATABASE_URL=file:${SQLITE_PATH}` internally.
 
 Run the integrated app stack:
 
@@ -306,18 +308,22 @@ Open the SQLite database:
 make sqlite-api
 ```
 
-For Elysia + Drizzle with SQLite, install app dependencies inside the API project:
+Apply migrations:
 
 ```sh
-bun add elysia drizzle-orm
-bun add -D drizzle-kit
+make db-migrate
 ```
 
-Use generated migrations for durable schema changes:
+Seed development fixture data:
 
 ```sh
-bunx drizzle-kit generate
-bunx drizzle-kit migrate
+make db-seed
+```
+
+Reset the dev SQLite database, then migrate and seed it:
+
+```sh
+make db-reset
 ```
 
 ## Production
@@ -375,7 +381,7 @@ make prod-api
 
 Development SQLite data is stored in the `dev-api-sqlite-data` Docker volume. Production API SQLite data is stored in the `prod-api-sqlite-data` Docker volume. If you run `docker compose down -v`, both local API databases are deleted.
 
-If Docker Desktop cannot mount `/Users/mariomedrano/Projects/ajedrezlapaz`, add that path to Docker Desktop file sharing settings, or change `WEB_PATH`, `API_PATH`, or `DOTFILES_PATH` in `.env`.
+If Docker Desktop cannot mount `/Users/mariomedrano/Projects/ajedrezlapaz`, add that path to Docker Desktop file sharing settings, or change `WEB_PATH`, `API_PATH`, `OPS_PATH`, or `DOTFILES_PATH` in `.env`.
 
 The `ws-home` volume is mounted at `/home/mario` and keeps your dotfiles clone, shell history, LazyVim plugins, and tool state between rebuilds.
 

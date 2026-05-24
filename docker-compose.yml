@@ -24,6 +24,7 @@ services:
     volumes:
       - ${WEB_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/web}:/alp/web
       - ${API_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/api}:/alp/api
+      - ${OPS_PATH:-/Users/mariomedrano/Projects/ajedrezlapaz/ops}:/alp/ops
       - ${DOTFILES_PATH:-/Users/mariomedrano/Dev/.dotfiles}:/alp/dotfiles:ro
       - ws-home:/home/mario
       - ws-bun-cache:/home/mario/.bun/install/cache
@@ -64,12 +65,13 @@ services:
     container_name: ${PROJECT_NAME:-ajedrezlapaz}-dev-api
     hostname: dev
     working_dir: /alp/api
-    command: sh -lc "bun install && bun run dev"
+    command: sh -lc "bun install && bun run db:migrate && bun run dev"
     tty: true
     stdin_open: true
     environment:
       NODE_ENV: development
-      DATABASE_URL: ${DATABASE_URL:-file:/alp/api/data/app.db}
+      HOST: 0.0.0.0
+      PORT: 4000
       SQLITE_PATH: ${SQLITE_PATH:-/alp/api/data/app.db}
       FRONTEND_URL: ${DEV_FRONTEND_URL:-http://localhost:3000}
       CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required}
