@@ -62,6 +62,15 @@ logs-api: ## [dev] Follow dev-api container logs.
 
 # @group Utilities
 
+smoke-test: ## [dev] Run a quick health check against the running API.
+	$(COMPOSE) run --rm ws sh /alp/ops/scripts/smoke-test.sh --api-url http://dev-api:4000
+
+hooks-install: ## [dev] Install the API types pre-commit hook into .git/hooks.
+	@mkdir -p .git/hooks
+	@cp .githooks/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "Pre-commit hook installed (api-types-check)."
+
 status: ## [dev] Show development Compose service status.
 	$(COMPOSE) ps
 
@@ -78,15 +87,6 @@ prod-web: ## [prod] Build and run the production web container.
 
 prod-api: ## [prod] Build and run the production API container.
 	$(COMPOSE_PROD) up --build prod-api
-
-smoke-test: ## Run a quick health check against the running API (dev or prod).
-	@scripts/smoke-test.sh
-
-hooks-install: ## Install the API types pre-commit hook into .git/hooks.
-	@mkdir -p .git/hooks
-	@cp .githooks/pre-commit .git/hooks/pre-commit
-	@chmod +x .git/hooks/pre-commit
-	@echo "Pre-commit hook installed (api-types-check)."
 
 # @group Helpers
 

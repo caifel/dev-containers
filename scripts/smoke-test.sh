@@ -13,6 +13,7 @@ Checks:
   3. Swagger JSON (/swagger/json)
   4. Authentication (login, session cookie, /auth/me)
   5. CSRF token flow (GET /auth/csrf-token)
+  6. Logout
 
 Exit code 0 on success, 1 on any failure.
 EOF
@@ -60,40 +61,66 @@ check() {
   fi
 }
 
-http_get() {
+http_get_status() {
   local path="$1"
-  local extra_args="${2:-}"
-  # shellcheck disable=SC2086
-  curl -s -o /dev/null -w "%{http_code}" -b "$COOKIE_JAR" -c "$COOKIE_JAR" $extra_args "$api_url$path"
+  curl -sS -o /dev/null -w "%{http_code}" -b "$COOKIE_JAR" -c "$COOKIE_JAR" "$api_url$path" 2>/dev/null || true
 }
 
 http_get_body() {
   local path="$1"
-  local extra_args="${2:-}"
-  # shellcheck disable=SC2086
-  curl -s -b "$COOKIE_JAR" -c "$COOKIE_JAR" $extra_args "$api_url$path"
+  curl -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" "$api_url$path" 2>/dev/null || true
+}
+
+http_post_json_status() {
+  local path="$1"
+  local body="$2"
+  curl -sS -o /dev/null -w "%{http_code}" \
+    -b "$COOKIE_JAR" \
+    -c "$COOKIE_JAR" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "$body" \
+    "$api_url$path" 2>/dev/null || true
+}
+
+http_post_json_body() {
+  local path="$1"
+  local body="$2"
+  curl -sS \
+    -b "$COOKIE_JAR" \
+    -c "$COOKIE_JAR" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "$body" \
+    "$api_url$path" 2>/dev/null || true
 }
 
 printf '\nSmoke-testing API at %s...\n\n' "$api_url"
 
 # 1. Root
-check "GET /" "$(http_get "/")"
+check "GET /" "$(http_get_status "/")"
 
 # 2. Health (DB connectivity)
-status=$(http_get "/health")
+status=$(http_get_status "/health")
 body=$(http_get_body "/health")
 check "GET /health" "$status" "$body"
 
 # 3. Swagger JSON
-check "GET /swagger/json" "$(http_get "/swagger/json")"
+check "GET /swagger/json" "$(http_get_status "/swagger/json")"
 
 # 4. Login
-status=$(http_get "/auth/login" "-X POST -H 'Content-Type: application/json' -d '{\"email\":\"admin@ajedrezlapaz.com\",\"password\":\"admin123\"}'")
-check "POST /auth/login" "$status"
+login_body='{"email":"admin@ajedrezlapaz.com","password":"admin123"}'
+status=$(http_post_json_status "/auth/login" "$login_body")
+if [ "$status" = "200" ]; then
+  check "POST /auth/login" "$status"
+else
+  body=$(http_post_json_body "/auth/login" "$login_body")
+  check "POST /auth/login" "$status" "$body"
+fi
 
 # 5. Get current user (requires session cookie from login)
 body=$(http_get_body "/auth/me")
-status=$(http_get "/auth/me")
+status=$(http_get_status "/auth/me")
 if [ "$status" = "200" ]; then
   user_name=$(printf '%s' "$body" | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')
   check "GET /auth/me" "$status" "user=$user_name"
@@ -103,7 +130,7 @@ fi
 
 # 6. CSRF token
 csrf_body=$(http_get_body "/auth/csrf-token")
-status=$(http_get "/auth/csrf-token")
+status=$(http_get_status "/auth/csrf-token")
 if [ "$status" = "200" ]; then
   CSRF_TOKEN=$(printf '%s' "$csrf_body" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
   if [ -n "$CSRF_TOKEN" ]; then
@@ -118,7 +145,7 @@ else
 fi
 
 # 7. Logout
-check "POST /auth/logout" "$(http_get "/auth/logout" "-X POST -H 'Content-Type: application/json'")"
+check "POST /auth/logout" "$(http_post_json_status "/auth/logout" "{}")"
 
 rm -f "$COOKIE_JAR"
 
