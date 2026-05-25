@@ -126,7 +126,7 @@ check "GET /health" "$status" "$body"
 check "GET /swagger/json" "$(http_get_status "/swagger/json")"
 
 # 4. Login
-login_body='{"email":"admin@ajedrezlapaz.com","password":"admin123"}'
+login_body='{"username":"admin","password":"admin123"}'
 status=$(http_post_json_status "/auth/login" "$login_body")
 if [ "$status" = "200" ]; then
   check "POST /auth/login" "$status"
