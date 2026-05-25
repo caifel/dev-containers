@@ -1,7 +1,7 @@
 COMPOSE=docker compose
 COMPOSE_PROD=$(COMPOSE) -f docker-compose.prod.yml
 
-.PHONY: build up down logs up-ws down-ws shell logs-ws api-types api-types-check db-migrate db-seed db-reset shell-api sqlite-api logs-api status clean prod prod-web prod-api smoke-test hooks-install help h
+.PHONY: build up down logs up-ws down-ws shell logs-ws api-types api-types-check db-migration-refresh db-migrate db-seed db-reset db-rebuild shell-api sqlite-api logs-api status clean prod prod-web prod-api smoke-test hooks-install help h
 
 # @group Build
 
@@ -41,15 +41,22 @@ api-types: ## [dev] Regenerate web API types from the running dev-api Swagger sc
 api-types-check: ## [dev] Check that generated web API types match the running dev-api Swagger schema.
 	@scripts/sync-api-types.sh --check
 
+db-migration-refresh: ## [dev] Recreate the current API migration snapshot from schema.ts.
+	$(COMPOSE) run --rm dev-api sh -lc "bun install && bun run db:recreate-migration"
+
 db-migrate: ## [dev] Apply API database migrations in the dev SQLite volume.
 	$(COMPOSE) run --rm dev-api sh -lc "bun install && bun run db:migrate"
 
 db-seed: ## [dev] Seed the dev API database; this replaces fixture-owned data.
 	$(COMPOSE) run --rm dev-api sh -lc "bun install && bun run db:seed"
 
-db-reset: ## [dev] Delete the dev API SQLite files, then migrate and seed them.
+db-reset: ## [dev] Delete dev SQLite files, then migrate and seed from current migration.
 	$(COMPOSE) rm -sf dev-api
 	$(COMPOSE) run --rm dev-api sh -lc "rm -f /alp/api/data/app.db /alp/api/data/app.db-* && bun install && bun run db:migrate && bun run db:seed"
+
+db-rebuild: ## [dev] Recreate migration, delete dev SQLite files, then migrate and seed.
+	$(COMPOSE) rm -sf dev-api
+	$(COMPOSE) run --rm dev-api sh -lc "rm -f /alp/api/data/app.db /alp/api/data/app.db-* && bun install && bun run db:recreate-migration && bun run db:migrate && bun run db:seed"
 
 shell-api: ## [dev] Open a shell in the dev-api container.
 	$(COMPOSE) exec dev-api sh
