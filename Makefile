@@ -62,7 +62,8 @@ logs-api: ## [dev] Follow dev-api container logs.
 
 # @group Utilities
 
-smoke-test: ## [dev] Run a quick health check against the running API.
+smoke-test: ## [dev] Start dev-api if needed, then run a quick health check.
+	$(COMPOSE) up -d dev-api
 	$(COMPOSE) run --rm ws sh /alp/ops/scripts/smoke-test.sh --api-url http://dev-api:4000
 
 hooks-install: ## [dev] Install the API types pre-commit hook into .git/hooks.

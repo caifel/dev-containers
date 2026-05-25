@@ -202,6 +202,13 @@ make api-types
 make api-types-check
 ```
 
+From inside `ws`, the same script can update the mounted web project as long as `dev-api` is already running:
+
+```sh
+/alp/ops/scripts/sync-api-types.sh
+/alp/ops/scripts/sync-api-types.sh --check
+```
+
 Stop the integrated app stack:
 
 ```sh

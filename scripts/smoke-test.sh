@@ -97,6 +97,23 @@ http_post_json_body() {
 
 printf '\nSmoke-testing API at %s...\n\n' "$api_url"
 
+printf 'Waiting for API readiness'
+i=0
+while [ "$i" -lt 30 ]; do
+  if [ "$(http_get_status "/health")" = "200" ]; then
+    printf '\n\n'
+    break
+  fi
+
+  i=$((i + 1))
+  printf '.'
+  sleep 1
+done
+
+if [ "$i" -ge 30 ]; then
+  printf '\n\nAPI did not become ready within 30 seconds.\n\n'
+fi
+
 # 1. Root
 check "GET /" "$(http_get_status "/")"
 
