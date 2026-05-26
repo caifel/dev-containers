@@ -1,7 +1,7 @@
 COMPOSE=docker compose
 COMPOSE_PROD=$(COMPOSE) -f docker-compose.prod.yml
 
-.PHONY: build up down logs up-ws down-ws shell logs-ws api-types api-types-check db-migration-refresh db-migrate db-seed db-reset db-rebuild shell-api sqlite-api logs-api status clean prod prod-web prod-api smoke-test hooks-install help h
+.PHONY: build up down logs up-ws down-ws shell logs-ws api-types api-types-check api-test db-migration-refresh db-migrate db-seed db-reset db-rebuild shell-api sqlite-api logs-api status clean prod prod-web prod-api smoke-test verify hooks-install help h
 
 # @group Build
 
@@ -24,7 +24,7 @@ logs-ws: ## [dev] Follow ws container logs.
 
 # @group Dev App
 
-up: ## [dev] Start dev-api + dev-web, migrate DB, then refresh API types.
+up: ## [dev] Start dev-api + dev-web, then refresh web API types.
 	@scripts/sync-api-types.sh
 
 down: ## [dev] Stop and remove dev-web + dev-api while keeping named volumes.
@@ -40,6 +40,9 @@ api-types: ## [dev] Regenerate web API types from the running dev-api Swagger sc
 
 api-types-check: ## [dev] Check that generated web API types match the running dev-api Swagger schema.
 	@scripts/sync-api-types.sh --check
+
+api-test: ## [dev] Run the API test suite inside dev-api.
+	$(COMPOSE) exec -T dev-api bun test
 
 db-migration-refresh: ## [dev] Recreate the current API migration snapshot from schema.ts.
 	$(COMPOSE) run --rm dev-api sh -lc "bun install && bun run db:recreate-migration"
@@ -72,6 +75,9 @@ logs-api: ## [dev] Follow dev-api container logs.
 smoke-test: ## [dev] Start dev-api if needed, then run a quick health check.
 	$(COMPOSE) up -d dev-api
 	$(COMPOSE) run --rm ws sh /alp/ops/scripts/smoke-test.sh --api-url http://dev-api:4000
+
+verify: ## [dev] Rebuild DB, refresh/check types, then smoke-test.
+	$(MAKE) db-rebuild && $(MAKE) api-types && $(MAKE) api-types-check && $(MAKE) smoke-test
 
 hooks-install: ## [dev] Install the API types pre-commit hook into .git/hooks.
 	@mkdir -p .git/hooks

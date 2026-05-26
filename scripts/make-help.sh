@@ -35,6 +35,8 @@ fi
 if [ -t 1 ]; then
   dim="$(printf '\033[2m')"
   yellow="$(printf '\033[33m')"
+  orange="$(printf '\033[38;5;208m')"
+  red="$(printf '\033[31m')"
   blue="$(printf '\033[34m')"
   green="$(printf '\033[32m')"
   white="$(printf '\033[37m')"
@@ -42,6 +44,8 @@ if [ -t 1 ]; then
 else
   dim=""
   yellow=""
+  orange=""
+  red=""
   blue=""
   green=""
   white=""
@@ -99,6 +103,22 @@ highlight_description() {
       -e "s/\\bCompose\\b/${blue}Compose${reset}${white}/g"
 }
 
+target_color() {
+  local target="$1"
+
+  if [ "$target" = "clean" ]; then
+    printf "%s" "$red"
+    return
+  fi
+
+  if [ "$target" = "verify" ]; then
+    printf "%s" "$orange"
+    return
+  fi
+
+  printf "%s" "$yellow"
+}
+
 echo "Available $MODE targets:"
 for line in "${target_lines[@]}"; do
   target="${line%%$'\t'*}"
@@ -111,8 +131,9 @@ for line in "${target_lines[@]}"; do
 
   command="$(preview_command "$target")"
   highlighted_description="$(highlight_description "$description")"
+  color="$(target_color "$target")"
   printf "    %s%s%s > %s%s%s -> %s%s%s\n" \
-    "$yellow" "$target" "$reset" \
+    "$color" "$target" "$reset" \
     "$white" "$highlighted_description" "$reset" \
     "$green" "$command" "$reset"
 done
