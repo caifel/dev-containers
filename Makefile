@@ -42,7 +42,7 @@ api-types-check: ## [dev] Check that generated web API types match the running d
 	@scripts/sync-api-types.sh --check
 
 api-test: ## [dev] Run the API test suite inside dev-api.
-	$(COMPOSE) exec -T dev-api bun test
+	$(COMPOSE) exec -T dev-api bun test --max-concurrency=1
 
 db-migration-refresh: ## [dev] Recreate the current API migration snapshot from schema.ts.
 	$(COMPOSE) run --rm dev-api sh -lc "bun install && bun run db:recreate-migration"
