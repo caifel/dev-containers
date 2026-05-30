@@ -302,7 +302,7 @@ Login rate limiting uses Redis for per-username and per-IP counters. Redis runs 
 Startup order in the API container:
 
 ```text
-redis-server (daemonized, no persistence) → db:migrate → bun start
+redis-server (daemonized, no persistence) → readiness check (redis-cli ping) → db:migrate → bun start
 ```
 
 Redis is started with flags that disable persistence (`--save "" --appendonly no`) since rate-limit counters are ephemeral and expire automatically after the 15-minute window. No cleanup jobs needed.
