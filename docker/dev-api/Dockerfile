@@ -21,4 +21,4 @@ RUN apt-get update \
 USER ${USERNAME}
 WORKDIR /alp/api
 
-CMD redis-server --daemonize yes --save "" --appendonly no --pidfile /tmp/redis.pid && bun run dev
+CMD redis-server --daemonize yes --save "" --appendonly no --pidfile /tmp/redis.pid && until redis-cli ping 2>/dev/null; do sleep 0.1; done && bun run dev
