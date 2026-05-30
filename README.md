@@ -20,12 +20,12 @@ The development Compose stack has three main containers:
 
 - `ws`: your interactive development machine with terminal tools.
 - `dev-web`: runs the `ajedrezlapaz` Next.js app in development mode.
-- `dev-api`: runs the Elysia API with Bun and SQLite.
+- `dev-api`: runs the Elysia API with Bun, SQLite, and Redis (rate limiting).
 
 Production-like local testing lives in `docker-compose.prod.yml`:
 
 - `prod-web`: builds and runs the `ajedrezlapaz` Next.js app in production mode.
-- `prod-api`: builds and runs the Elysia API in production mode.
+- `prod-api`: builds and runs the Elysia API in production mode with Redis.
 
 All custom images use Debian Bookworm slim bases through `oven/bun:1-debian`.
 
@@ -290,6 +290,24 @@ SQLITE_PATH=/alp/api/data/app.db
 ```
 
 Drizzle derives `DATABASE_URL=file:${SQLITE_PATH}` internally.
+
+### Redis (rate limiting)
+
+Login rate limiting uses Redis for per-username and per-IP counters. Redis runs as a lightweight side process **inside the API container** — no separate service, no persistence.
+
+| Config | Default | Purpose |
+|--------|---------|---------|
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
+
+Startup order in the API container:
+
+```text
+redis-server (daemonized, no persistence) → readiness check (redis-cli ping) → db:migrate → bun start
+```
+
+Redis is started with flags that disable persistence (`--save "" --appendonly no`) since rate-limit counters are ephemeral and expire automatically after the 15-minute window. No cleanup jobs needed.
+
+When Redis is unreachable the API fails open: rate limiting is skipped, and only a 500ms artificial delay protects against brute-force attempts. Redis recovers automatically within 30 seconds of becoming available again.
 
 Run the integrated app stack:
 
