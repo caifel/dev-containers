@@ -309,6 +309,21 @@ Redis is started with flags that disable persistence (`--save "" --appendonly no
 
 When Redis is unreachable the API fails open: rate limiting is skipped, and only a 500ms artificial delay protects against brute-force attempts. Redis recovers automatically within 30 seconds of becoming available again.
 
+### Environment Variables
+
+All API runtime configuration is passed through the Docker Compose environment blocks from `ops/.env`.
+
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `CSRF_SECRET` | Yes | — | HMAC key for CSRF token signing |
+| `REDIS_URL` | No | `redis://localhost:6379` | Redis connection for rate limiting and tokens |
+| `RESEND_API_KEY` | Production only | — | Resend API key for email delivery (fails fast if missing in prod) |
+| `EMAIL_FROM` | No | `noreply@support.ajedrezlapaz.com` | Sender address for verification and reset emails |
+| `FRONTEND_URL` | Yes | — | Allowed CORS origin (comma-separated) |
+| `NODE_ENV` | No | `development` | Controls cookie Secure flag and session cookie name |
+
+In development, `RESEND_API_KEY` defaults to empty (emails are not sent but the API does not crash). In production (`docker-compose.prod.yml`), it uses `${RESEND_API_KEY:?}` and fails fast when the key is not set.
+
 Run the integrated app stack:
 
 ```sh
